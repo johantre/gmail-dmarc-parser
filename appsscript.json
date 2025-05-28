@@ -1,0 +1,23 @@
+{
+  "timeZone": "Europe/Brussels",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/gmail.addons.execute",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/gmail.readonly"
+  ],
+  "addOns": {
+    "common": {
+      "name": "DMARC XML Parser",
+      "logoUrl": "https://ssl.gstatic.com/docs/script/images/logo.png"
+    },
+    "gmail": {
+      "contextualTriggers": [
+        {
+          "unconditional": {},
+          "onTriggerFunction": "buildAddOn"
+        }
+      ]
+    }
+  },
+  "runtimeVersion": "V8"
+}
