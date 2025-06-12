@@ -228,7 +228,7 @@ function decompressGzWithPako(attachment) {
     Logger.log('Decompressed XML (eerste 200 chars): ' + decompressed.substring(0, 200));
     return decompressed;
   } catch(e) {
-    Logger.log('Fout bij pako decompressie: ' + e);
+    Logger.log('❌Fout bij pako decompressie: ' + e);
     return null;
   }
 }
