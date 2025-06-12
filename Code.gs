@@ -108,10 +108,10 @@ function buildAddOn(e) {
         .setContent("📋 " + disposition))
       .addWidget(CardService.newKeyValue()
         .setTopLabel("DKIM")
-        .setContent(dkim === "pass" ? "✅ geslaagd" : "❌ mislukt"))
+        .setContent(dkim === "pass" ? "✅ geslaagd" : "❌ mislukt!"))
       .addWidget(CardService.newKeyValue()
         .setTopLabel("SPF")
-        .setContent(spf === "pass" ? "✅ geslaagd" : "❌ mislukt"));
+        .setContent(spf === "pass" ? "✅ geslaagd" : "❌ mislukt!"));
 
     cardBuilder.addSection(recordSection);
   });
@@ -228,7 +228,7 @@ function decompressGzWithPako(attachment) {
     Logger.log('Decompressed XML (eerste 200 chars): ' + decompressed.substring(0, 200));
     return decompressed;
   } catch(e) {
-    Logger.log('❌Fout bij pako decompressie: ' + e);
+    Logger.log('❌ Fout bij pako decompressie: ' + e);
     return null;
   }
 }
