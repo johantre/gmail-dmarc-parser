@@ -1,4 +1,4 @@
-# gmail-dmarc-parser
+# Gmail Dmarc Parser
 
 This is a google apps script that parses the DMARC report mail sent from Microsoft.\
 In Google Workspace this still needs to be deployed.
