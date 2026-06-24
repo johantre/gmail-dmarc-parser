@@ -9,7 +9,8 @@ function buildAddOn(e) {
   var attachments = message.getAttachments();
 
   var gzAttachment = attachments.find(function(att) {
-    return att.getName().toLowerCase().endsWith('.xml.gz');
+    var name = att.getName().toLowerCase();
+    return name.endsWith('.xml.gz') || name.endsWith('.zip');
   });
 
   if (!gzAttachment) {
@@ -18,19 +19,21 @@ function buildAddOn(e) {
       .addSection(
         CardService.newCardSection()
           .addWidget(CardService.newTextParagraph()
-            .setText("Deze e-mail bevat geen .xml.gz DMARC rapport."))
+            .setText("Deze e-mail bevat geen .xml.gz of .zip DMARC rapport."))
       )
       .build();
   }
 
-  var xmlText = decompressGzWithPako(gzAttachment);
+  var xmlText = gzAttachment.getName().toLowerCase().endsWith('.zip')
+    ? extractXmlFromZip(gzAttachment)
+    : decompressGzWithPako(gzAttachment);
   if (!xmlText) {
     return CardService.newCardBuilder()
       .setHeader(CardService.newCardHeader().setTitle("Fout bij decompressie"))
       .addSection(
         CardService.newCardSection()
           .addWidget(CardService.newTextParagraph()
-            .setText("Kon het .xml.gz bestand niet decompressen."))
+            .setText("Kon het bestand niet decompressen."))
       )
       .build();
   }
@@ -213,6 +216,20 @@ function authorizeUrlFetch() {
 function loadPako() {
   var response = UrlFetchApp.fetch('https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js');
   eval(response.getContentText());
+}
+
+function extractXmlFromZip(attachment) {
+  try {
+    var unzipped = Utilities.unzip(attachment.copyBlob());
+    var xmlBlob = unzipped.find(function(blob) {
+      return blob.getName().toLowerCase().endsWith('.xml');
+    });
+    if (!xmlBlob) return null;
+    return xmlBlob.getDataAsString();
+  } catch(e) {
+    Logger.log('❌ Fout bij ZIP extractie: ' + e);
+    return null;
+  }
 }
 
 function decompressGzWithPako(attachment) {
