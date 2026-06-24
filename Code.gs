@@ -270,6 +270,12 @@ function callGemini(prompt) {
   }
 }
 
+function listGeminiModels() {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  var response = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, { muteHttpExceptions: true });
+  Logger.log(response.getContentText());
+}
+
 function authorizeUrlFetch() {
   loadPako();  // dwingt het script om toestemming te vragen
 }
