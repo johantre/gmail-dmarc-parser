@@ -86,6 +86,16 @@ function buildAddOn(e) {
         .setText(`📤 <b>Rapport verzonden door:</b><br>${orgName} (${orgEmail})`))
   );
 
+  var geminiExplanation = callGemini(buildGeminiPrompt(orgName, orgEmail, records, ns));
+  if (geminiExplanation) {
+    cardBuilder.addSection(
+      CardService.newCardSection()
+        .setHeader("🤖 Uitleg door Gemini")
+        .addWidget(CardService.newTextParagraph()
+          .setText(geminiExplanation))
+    );
+  }
+
   records.forEach(function(record, i) {
     var row = record.getChild('row', ns);
     if (!row) return;  // skip als geen row
@@ -208,6 +218,49 @@ function buildSummaryCard(summary, filename) {
     .build();
 }
 
+
+function buildGeminiPrompt(orgName, orgEmail, records, ns) {
+  var lines = [
+    'Je bent een e-mail security expert. Leg in eenvoudige Nederlandse taal uit wat dit DMARC rapport betekent voor de e-mailbezorging van het domein.',
+    'Geef een korte samenvatting van 3 tot 5 zinnen en vermeld duidelijk of er acties nodig zijn.',
+    'Gebruik geen markdown, geen opsommingstekens, gewoon lopende tekst.',
+    '',
+    'Rapport van: ' + orgName + ' (' + orgEmail + ')',
+    'Aantal records: ' + records.length,
+    ''
+  ];
+  records.forEach(function(record, i) {
+    var row = record.getChild('row', ns);
+    if (!row) return;
+    var policyEvaluated = row.getChild('policy_evaluated', ns);
+    lines.push('Record ' + (i + 1) + ':'
+      + ' IP=' + safeGetChildText(row, 'source_ip', ns)
+      + ', aantal=' + safeGetChildText(record, 'count', ns)
+      + ', dispositie=' + (policyEvaluated ? safeGetChildText(policyEvaluated, 'disposition', ns) : 'onbekend')
+      + ', DKIM=' + (policyEvaluated ? safeGetChildText(policyEvaluated, 'dkim', ns) : 'onbekend')
+      + ', SPF=' + (policyEvaluated ? safeGetChildText(policyEvaluated, 'spf', ns) : 'onbekend'));
+  });
+  return lines.join('\n');
+}
+
+function callGemini(prompt) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) return null;
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+  try {
+    var response = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      muteHttpExceptions: true
+    });
+    var json = JSON.parse(response.getContentText());
+    return json.candidates[0].content.parts[0].text;
+  } catch(e) {
+    Logger.log('❌ Gemini fout: ' + e);
+    return null;
+  }
+}
 
 function authorizeUrlFetch() {
   loadPako();  // dwingt het script om toestemming te vragen
