@@ -87,14 +87,12 @@ function buildAddOn(e) {
   );
 
   var geminiExplanation = callGemini(buildGeminiPrompt(orgName, orgEmail, records, ns));
-  if (geminiExplanation) {
-    cardBuilder.addSection(
-      CardService.newCardSection()
-        .setHeader("🤖 Uitleg door Gemini")
-        .addWidget(CardService.newTextParagraph()
-          .setText(geminiExplanation))
-    );
-  }
+  cardBuilder.addSection(
+    CardService.newCardSection()
+      .setHeader("🤖 Uitleg door Gemini")
+      .addWidget(CardService.newTextParagraph()
+        .setText(geminiExplanation || "⚠️ Gemini kon geen uitleg genereren. Controleer de GEMINI_API_KEY in Script Properties en de uitvoeringslogboeken."))
+  );
 
   records.forEach(function(record, i) {
     var row = record.getChild('row', ns);
@@ -109,7 +107,7 @@ function buildAddOn(e) {
     var dkim = policyEvaluated ? safeGetChildText(policyEvaluated, 'dkim', ns) : '[niet beschikbaar]';
     var spf = policyEvaluated ? safeGetChildText(policyEvaluated, 'spf', ns) : '[niet beschikbaar]';
 
-    var count = safeGetChildText(record, 'count', ns);
+    var count = safeGetChildText(row, 'count', ns);
 
     var recordSection = CardService.newCardSection()
       .setHeader("Record " + (i + 1) + " — IP: " + sourceIp)
