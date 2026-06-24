@@ -247,7 +247,7 @@ function callGemini(prompt) {
     Logger.log('❌ Gemini: geen GEMINI_API_KEY gevonden in Script Properties');
     return null;
   }
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
+  var url = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' + apiKey;
   try {
     var response = UrlFetchApp.fetch(url, {
       method: 'post',
