@@ -243,7 +243,10 @@ function buildGeminiPrompt(orgName, orgEmail, records, ns) {
 
 function callGemini(prompt) {
   var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) return null;
+  if (!apiKey) {
+    Logger.log('❌ Gemini: geen GEMINI_API_KEY gevonden in Script Properties');
+    return null;
+  }
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
   try {
     var response = UrlFetchApp.fetch(url, {
@@ -252,7 +255,14 @@ function callGemini(prompt) {
       payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
       muteHttpExceptions: true
     });
-    var json = JSON.parse(response.getContentText());
+    var responseText = response.getContentText();
+    Logger.log('Gemini HTTP status: ' + response.getResponseCode());
+    Logger.log('Gemini response: ' + responseText.substring(0, 800));
+    var json = JSON.parse(responseText);
+    if (!json.candidates || !json.candidates[0]) {
+      Logger.log('❌ Gemini: geen candidates in response');
+      return null;
+    }
     return json.candidates[0].content.parts[0].text;
   } catch(e) {
     Logger.log('❌ Gemini fout: ' + e);
