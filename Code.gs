@@ -86,12 +86,12 @@ function buildAddOn(e) {
         .setText(`📤 <b>Rapport verzonden door:</b><br>${orgName} (${orgEmail})`))
   );
 
-  var grokExplanation = callGrok(buildPrompt(orgName, orgEmail, records, ns));
+  var claudeExplanation = callClaude(buildPrompt(orgName, orgEmail, records, ns));
   cardBuilder.addSection(
     CardService.newCardSection()
-      .setHeader("🤖 Uitleg door Grok")
+      .setHeader("🤖 Uitleg door Claude")
       .addWidget(CardService.newTextParagraph()
-        .setText(grokExplanation || "⚠️ Grok kon geen uitleg genereren. Controleer de XAI_API_KEY in Script Properties en de uitvoeringslogboeken."))
+        .setText(claudeExplanation || "⚠️ Claude kon geen uitleg genereren. Controleer de ANTHROPIC_API_KEY in Script Properties en de uitvoeringslogboeken."))
   );
 
   records.forEach(function(record, i) {
@@ -233,7 +233,7 @@ function buildPrompt(orgName, orgEmail, records, ns) {
     var policyEvaluated = row.getChild('policy_evaluated', ns);
     lines.push('Record ' + (i + 1) + ':'
       + ' IP=' + safeGetChildText(row, 'source_ip', ns)
-      + ', aantal=' + safeGetChildText(record, 'count', ns)
+      + ', aantal=' + safeGetChildText(row, 'count', ns)
       + ', dispositie=' + (policyEvaluated ? safeGetChildText(policyEvaluated, 'disposition', ns) : 'onbekend')
       + ', DKIM=' + (policyEvaluated ? safeGetChildText(policyEvaluated, 'dkim', ns) : 'onbekend')
       + ', SPF=' + (policyEvaluated ? safeGetChildText(policyEvaluated, 'spf', ns) : 'onbekend'));
@@ -241,34 +241,38 @@ function buildPrompt(orgName, orgEmail, records, ns) {
   return lines.join('\n');
 }
 
-function callGrok(prompt) {
-  var apiKey = PropertiesService.getScriptProperties().getProperty('XAI_API_KEY');
+function callClaude(prompt) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
   if (!apiKey) {
-    Logger.log('❌ Grok: geen XAI_API_KEY gevonden in Script Properties');
+    Logger.log('❌ Claude: geen ANTHROPIC_API_KEY gevonden in Script Properties');
     return null;
   }
   try {
-    var response = UrlFetchApp.fetch('https://api.x.ai/v1/chat/completions', {
+    var response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
       method: 'post',
       contentType: 'application/json',
-      headers: { 'Authorization': 'Bearer ' + apiKey },
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
       payload: JSON.stringify({
-        model: 'grok-3-mini',
+        model: 'claude-haiku-4-5',
+        max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }]
       }),
       muteHttpExceptions: true
     });
     var responseText = response.getContentText();
-    Logger.log('Grok HTTP status: ' + response.getResponseCode());
-    Logger.log('Grok response: ' + responseText.substring(0, 500));
+    Logger.log('Claude HTTP status: ' + response.getResponseCode());
+    Logger.log('Claude response: ' + responseText.substring(0, 500));
     var json = JSON.parse(responseText);
-    if (!json.choices || !json.choices[0]) {
-      Logger.log('❌ Grok: geen choices in response');
+    if (!json.content || !json.content[0]) {
+      Logger.log('❌ Claude: geen content in response');
       return null;
     }
-    return json.choices[0].message.content;
+    return json.content[0].text;
   } catch(e) {
-    Logger.log('❌ Grok fout: ' + e);
+    Logger.log('❌ Claude fout: ' + e);
     return null;
   }
 }
