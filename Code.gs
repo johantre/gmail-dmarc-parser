@@ -86,13 +86,26 @@ function buildAddOn(e) {
         .setText(`📤 <b>Rapport verzonden door:</b><br>${orgName} (${orgEmail})`))
   );
 
-  var claudeExplanation = callClaude(buildPrompt(orgName, orgEmail, records, ns));
-  cardBuilder.addSection(
-    CardService.newCardSection()
-      .setHeader("🤖 Uitleg door Claude")
-      .addWidget(CardService.newTextParagraph()
-        .setText(claudeExplanation || "⚠️ Claude kon geen uitleg genereren. Controleer de ANTHROPIC_API_KEY in Script Properties en de uitvoeringslogboeken."))
-  );
+  var claudeRaw = callClaude(buildPrompt(orgName, orgEmail, records, ns));
+  var claudeParsed = parseClaudeResponse(claudeRaw);
+  var claudeSection = CardService.newCardSection().setHeader("🤖 Uitleg door Claude");
+  if (claudeParsed.oordeel || claudeParsed.uitleg || claudeParsed.actie) {
+    if (claudeParsed.oordeel) {
+      claudeSection.addWidget(CardService.newTextParagraph().setText('<b>' + claudeParsed.oordeel + '</b>'));
+    }
+    if (claudeParsed.uitleg) {
+      claudeSection.addWidget(CardService.newTextParagraph().setText(claudeParsed.uitleg));
+    }
+    if (claudeParsed.actie) {
+      claudeSection.addWidget(CardService.newKeyValue()
+        .setTopLabel("Actie")
+        .setContent(claudeParsed.actie));
+    }
+  } else {
+    claudeSection.addWidget(CardService.newTextParagraph()
+      .setText(claudeRaw || "⚠️ Claude kon geen uitleg genereren. Controleer de ANTHROPIC_API_KEY in Script Properties."));
+  }
+  cardBuilder.addSection(claudeSection);
 
   records.forEach(function(record, i) {
     var row = record.getChild('row', ns);
@@ -217,11 +230,23 @@ function buildSummaryCard(summary, filename) {
 }
 
 
+function parseClaudeResponse(text) {
+  var result = { oordeel: null, uitleg: null, actie: null };
+  if (!text) return result;
+  text.split('\n').forEach(function(line) {
+    if (line.startsWith('OORDEEL:')) result.oordeel = line.replace('OORDEEL:', '').trim();
+    else if (line.startsWith('UITLEG:')) result.uitleg = line.replace('UITLEG:', '').trim();
+    else if (line.startsWith('ACTIE:')) result.actie = line.replace('ACTIE:', '').trim();
+  });
+  return result;
+}
+
 function buildPrompt(orgName, orgEmail, records, ns) {
   var lines = [
-    'Je bent een e-mail security expert. Leg in eenvoudige Nederlandse taal uit wat dit DMARC rapport betekent voor de e-mailbezorging van het domein.',
-    'Geef een korte samenvatting van 3 tot 5 zinnen en vermeld duidelijk of er acties nodig zijn.',
-    'Gebruik geen markdown, geen opsommingstekens, gewoon lopende tekst.',
+    'Je bent een e-mail security expert. Analyseer dit DMARC rapport en geef je antwoord EXACT in dit formaat (drie regels, geen extra tekst):',
+    'OORDEEL: [kies één van: ✅ Alles in orde | ⚠️ Aandacht vereist | ❌ Actie vereist]',
+    'UITLEG: [2 tot 3 zinnen uitleg in eenvoudig Nederlands wat dit rapport betekent]',
+    'ACTIE: [concrete actie of "Geen actie nodig"]',
     '',
     'Rapport van: ' + orgName + ' (' + orgEmail + ')',
     'Aantal records: ' + records.length,
