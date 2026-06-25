@@ -86,12 +86,12 @@ function buildAddOn(e) {
         .setText(`📤 <b>Rapport verzonden door:</b><br>${orgName} (${orgEmail})`))
   );
 
-  var geminiExplanation = callGemini(buildGeminiPrompt(orgName, orgEmail, records, ns));
+  var grokExplanation = callGrok(buildPrompt(orgName, orgEmail, records, ns));
   cardBuilder.addSection(
     CardService.newCardSection()
-      .setHeader("🤖 Uitleg door Gemini")
+      .setHeader("🤖 Uitleg door Grok")
       .addWidget(CardService.newTextParagraph()
-        .setText(geminiExplanation || "⚠️ Gemini kon geen uitleg genereren. Controleer de GEMINI_API_KEY in Script Properties en de uitvoeringslogboeken."))
+        .setText(grokExplanation || "⚠️ Grok kon geen uitleg genereren. Controleer de XAI_API_KEY in Script Properties en de uitvoeringslogboeken."))
   );
 
   records.forEach(function(record, i) {
@@ -217,7 +217,7 @@ function buildSummaryCard(summary, filename) {
 }
 
 
-function buildGeminiPrompt(orgName, orgEmail, records, ns) {
+function buildPrompt(orgName, orgEmail, records, ns) {
   var lines = [
     'Je bent een e-mail security expert. Leg in eenvoudige Nederlandse taal uit wat dit DMARC rapport betekent voor de e-mailbezorging van het domein.',
     'Geef een korte samenvatting van 3 tot 5 zinnen en vermeld duidelijk of er acties nodig zijn.',
@@ -241,39 +241,36 @@ function buildGeminiPrompt(orgName, orgEmail, records, ns) {
   return lines.join('\n');
 }
 
-function callGemini(prompt) {
-  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+function callGrok(prompt) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('XAI_API_KEY');
   if (!apiKey) {
-    Logger.log('❌ Gemini: geen GEMINI_API_KEY gevonden in Script Properties');
+    Logger.log('❌ Grok: geen XAI_API_KEY gevonden in Script Properties');
     return null;
   }
-  var url = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-lite:generateContent?key=' + apiKey;
   try {
-    var response = UrlFetchApp.fetch(url, {
+    var response = UrlFetchApp.fetch('https://api.x.ai/v1/chat/completions', {
       method: 'post',
       contentType: 'application/json',
-      payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      headers: { 'Authorization': 'Bearer ' + apiKey },
+      payload: JSON.stringify({
+        model: 'grok-3-mini',
+        messages: [{ role: 'user', content: prompt }]
+      }),
       muteHttpExceptions: true
     });
     var responseText = response.getContentText();
-    Logger.log('Gemini HTTP status: ' + response.getResponseCode());
-    Logger.log('Gemini response: ' + responseText.substring(0, 800));
+    Logger.log('Grok HTTP status: ' + response.getResponseCode());
+    Logger.log('Grok response: ' + responseText.substring(0, 500));
     var json = JSON.parse(responseText);
-    if (!json.candidates || !json.candidates[0]) {
-      Logger.log('❌ Gemini: geen candidates in response');
+    if (!json.choices || !json.choices[0]) {
+      Logger.log('❌ Grok: geen choices in response');
       return null;
     }
-    return json.candidates[0].content.parts[0].text;
+    return json.choices[0].message.content;
   } catch(e) {
-    Logger.log('❌ Gemini fout: ' + e);
+    Logger.log('❌ Grok fout: ' + e);
     return null;
   }
-}
-
-function listGeminiModels() {
-  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  var response = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1/models?key=' + apiKey, { muteHttpExceptions: true });
-  Logger.log(response.getContentText());
 }
 
 function authorizeUrlFetch() {
