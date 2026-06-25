@@ -72,7 +72,7 @@ function buildAddOn(e) {
   }
 
   var cardBuilder = CardService.newCardBuilder()
-    .setHeader(CardService.newCardHeader().setTitle("DMARC XML Parser - " + gzAttachment.getName()));
+    .setHeader(CardService.newCardHeader().setTitle("DMARC Parser (Claude) - " + gzAttachment.getName()));
 
   var generalSection = CardService.newCardSection()
     .addWidget(CardService.newTextParagraph()
