@@ -98,7 +98,7 @@ function buildAddOn(e) {
     }
     if (claudeParsed.actie) {
       claudeSection.addWidget(CardService.newKeyValue()
-        .setTopLabel("Actie")
+        .setTopLabel("🚀 Actie")
         .setContent(claudeParsed.actie));
     }
   } else {
